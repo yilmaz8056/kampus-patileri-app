@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Kampüsteki can dostlarımızın sağlık durumlarını ve konumlarını takip edin.">
+
+  <!-- Apple/iOS ve PWA Kurulum Etiketleri -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Patiler">
+  <link rel="apple-touch-icon" href="./icon-logo.png">
+  <meta name="theme-color" content="#ff8c42">
+
+  <title>Kampüs Patileri</title>
+
+  <!-- Sayfa çizilmeden önce temayı uygula (beyaz ekran parlamasını önler) -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('kampus-theme');
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="style.css?v=7.0">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-top">
+      <div class="logo">
+        <i class="fa-solid fa-paw" aria-hidden="true"></i>
+        <h1>Kampüs Patileri</h1>
+      </div>
+      <div class="header-actions">
+        <div id="user-score" class="score-chip" title="İyilik puanınız" aria-live="polite"><i class="fa-solid fa-gem" aria-hidden="true"></i> 0 Puan</div>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="Temayı değiştir"><i class="fa-solid fa-moon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="search-container" id="search-container">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <input type="search" id="search-input" placeholder="İsim veya konuma göre ara..." aria-label="İsim veya konuma göre ara" autocomplete="off">
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Kategoriler">
+      <button class="tab-btn active" role="tab" aria-selected="true" data-type="cat" type="button"><i class="fa-solid fa-cat" aria-hidden="true"></i> Kediler</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-type="dog" type="button"><i class="fa-solid fa-dog" aria-hidden="true"></i> Köpekler</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-type="adopt" type="button"><i class="fa-solid fa-house-chimney-heart" aria-hidden="true"></i> Yuva Arayanlar</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-type="station" type="button"><i class="fa-solid fa-bowl-food" aria-hidden="true"></i> İstasyonlar</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-type="system" type="button"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i> Sistem</button>
+    </div>
+  </header>
+
+  <main class="app-content">
+    <div id="animal-grid" class="cat-grid">
+      <!-- Hayvanlar JavaScript ile eklenecek -->
+    </div>
+  </main>
+
+  <button id="fab-add" class="fab" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> <span>Yeni Ekle</span></button>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Hayvan Detay Modalı -->
+  <div id="animal-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="m-name" hidden>
+    <div class="modal-content">
+      <button class="close-modal" id="close-detail-modal" type="button" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      <div class="modal-header-img">
+        <img id="m-img" src="" alt="Hayvan fotoğrafı" title="Büyütmek için dokunun">
+      </div>
+      <div class="modal-body">
+        <h2 id="m-name">İsim</h2>
+        <div id="m-guardian-badge" class="pill pill-guardian" hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Koruyucusu: <strong id="m-guardian-name"></strong></div>
+        <div id="m-traits" class="traits"></div>
+        <div id="m-adopt-badge" class="pill pill-success" hidden><i class="fa-solid fa-house-chimney-heart" aria-hidden="true"></i> Yuva Arıyor!</div>
+        <div id="m-sos-badge" class="pill pill-danger" hidden><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Kayıp / Acil Durum</div>
+        <p class="m-location"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> <span id="m-location">Konum</span></p>
+
+        <div class="status-grid">
+          <div class="status-card" id="m-station-card" hidden>
+            <i class="fa-solid fa-bowl-food" aria-hidden="true"></i>
+            <div><h3>İstasyon Durumu</h3><p id="m-station-state">-</p></div>
+          </div>
+          <div class="status-card" data-animal-only>
+            <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+            <div><h3>Sağlık</h3><p id="m-health">-</p></div>
+          </div>
+          <div class="status-card" data-animal-only>
+            <i class="fa-solid fa-syringe" aria-hidden="true"></i>
+            <div><h3>Aşı</h3><p id="m-vaccine">-</p></div>
+          </div>
+          <div class="status-card" id="m-neutered-card" data-animal-only>
+            <i class="fa-solid fa-scissors" aria-hidden="true"></i>
+            <div><h3>Kısırlaştırma</h3><p id="m-neutered">-</p></div>
+          </div>
+          <div class="status-card" data-animal-only>
+            <i class="fa-solid fa-cake-candles" aria-hidden="true"></i>
+            <div><h3>Yaş Tahmini</h3><p id="m-age">Bilinmiyor</p></div>
+          </div>
+          <div class="status-card status-success" id="m-adopt-card" hidden>
+            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+            <div><h3>İletişim Bilgisi</h3><p id="m-contact">-</p></div>
+          </div>
+        </div>
+
+        <div class="action-stack">
+          <button id="share-btn" class="submit-btn btn-blue" type="button"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Paylaş</button>
+          <button id="guardian-btn" class="submit-btn btn-purple" type="button" hidden><i class="fa-solid fa-shield-heart" aria-hidden="true"></i> Koruyucu Meleği Ol</button>
+          <button id="feed-animal-btn" class="submit-btn btn-amber" type="button"><i class="fa-solid fa-bone" aria-hidden="true"></i> Bugün Mama Verdim</button>
+          <p id="m-last-fed" class="last-fed">Son beslenme: Henüz veri yok</p>
+        </div>
+
+        <div class="qr-box">
+          <button id="generate-qr-btn" class="submit-btn btn-blue" type="button"><i class="fa-solid fa-qrcode" aria-hidden="true"></i> QR Kod Üret</button>
+          <img id="m-qr-img" src="" alt="QR Kod" hidden>
+          <p id="m-qr-help" class="qr-help" hidden>QR kod, canın adını ve konumunu içerir. Kendi cihazınızla tarayarak bilgiyi okuyabilirsiniz.</p>
+        </div>
+
+        <button id="edit-animal-btn" class="submit-btn btn-dark" type="button"><i class="fa-solid fa-pen" aria-hidden="true"></i> Bilgileri Güncelle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yeni Ekle / Güncelle Modalı -->
+  <div id="add-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-modal-title" hidden>
+    <div class="modal-content add-modal-content">
+      <button class="close-modal" id="close-add-modal" type="button" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      <div class="modal-body">
+        <h2 id="add-modal-title">Yeni Hayvan Ekle</h2>
+        <form id="add-form" novalidate>
+          <div class="form-group">
+            <label for="a-type">Tür</label>
+            <select id="a-type">
+              <option value="cat">Kedi</option>
+              <option value="dog">Köpek</option>
+              <option value="station">İstasyon (Kap)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="a-name">İsim / İstasyon Adı</label>
+            <input type="text" id="a-name" placeholder="Örn: Karabaş / Yemekhane Su Kabı" maxlength="60" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label id="a-image-label">Fotoğraf</label>
+            <p id="a-image-help" class="field-help"></p>
+            <div class="photo-pickers">
+              <label class="photo-btn"><i class="fa-solid fa-image" aria-hidden="true"></i> Galeriden<input type="file" id="a-image-file" accept="image/*"></label>
+              <label class="photo-btn"><i class="fa-solid fa-camera" aria-hidden="true"></i> Şimdi Çek<input type="file" id="a-camera-file" accept="image/*" capture="environment"></label>
+            </div>
+            <p id="selected-file-name" class="selected-file"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="a-location">Konum</label>
+            <input type="text" id="a-location" placeholder="Örn: Mühendislik Fakültesi" maxlength="80" autocomplete="off">
+          </div>
+
+          <!-- Sadece İSTASYON seçilirse -->
+          <div id="station-only-fields" hidden>
+            <div class="form-group">
+              <label for="a-station-state">İçerik Durumu</label>
+              <select id="a-station-state">
+                <option value="Dolu ✅">Dolu ✅</option>
+                <option value="Boş 🚨">Boş 🚨</option>
+                <option value="Zarar Görmüş ⚠️">Kırılmış / Zarar Görmüş ⚠️</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Normal hayvan alanları -->
+          <div id="animal-only-fields">
+            <div class="form-group">
+              <label for="a-age">Yaş Tahmini</label>
+              <input type="text" id="a-age" placeholder="Örn: 2 Aylık, 3 Yaşında" maxlength="40">
+            </div>
+
+            <div class="form-group">
+              <label for="a-health">Sağlık Durumu</label>
+              <input type="text" id="a-health" placeholder="Örn: Sağlıklı" maxlength="120">
+            </div>
+
+            <div class="form-group">
+              <label for="a-vaccine">Aşı Durumu</label>
+              <input type="text" id="a-vaccine" placeholder="Örn: Karma ve Kuduz yapıldı" maxlength="120">
+            </div>
+
+            <div class="form-group">
+              <label for="a-neutered">Kısırlaştırma Durumu</label>
+              <select id="a-neutered">
+                <option value="Kısırlaştırıldı">Kısırlaştırıldı</option>
+                <option value="Kısırlaştırılmadı">Kısırlaştırılmadı</option>
+                <option value="Bilinmiyor" selected>Bilinmiyor</option>
+              </select>
+            </div>
+
+            <div class="check-row">
+              <input type="checkbox" id="a-adopt">
+              <label for="a-adopt">Bu canlıya yuva aranıyor</label>
+            </div>
+
+            <div class="form-group callout callout-success" id="a-contact-container" hidden>
+              <label for="a-contact">Sahiplendirme İletişim Bilgisi</label>
+              <input type="text" id="a-contact" placeholder="Örn: 05xx xxx xx xx / IG: @kullaniciadi" maxlength="80">
+            </div>
+
+            <fieldset class="callout traits-fieldset">
+              <legend>Karakter Özellikleri (İsteğe bağlı)</legend>
+              <div class="traits-grid">
+                <label><input type="checkbox" name="trait" value="Uysal"> Uysal</label>
+                <label><input type="checkbox" name="trait" value="Oyunbaz"> Oyunbaz</label>
+                <label><input type="checkbox" name="trait" value="Uykucu"> Uykucu</label>
+                <label><input type="checkbox" name="trait" value="Obur"> Obur</label>
+                <label><input type="checkbox" name="trait" value="Korkak"> Korkak</label>
+                <label><input type="checkbox" name="trait" value="Agresif"> Agresif</label>
+                <label><input type="checkbox" name="trait" value="Sevgi Delisi"> Sevgi Delisi</label>
+              </div>
+            </fieldset>
+
+            <div class="callout callout-danger">
+              <label class="sos-label">
+                <input type="checkbox" id="a-sos"> KAYIP / ACİL DURUM
+              </label>
+              <p class="field-help">İşaretlenirse hayvanın kartı listede en üstte, acil durum etiketiyle gösterilir.</p>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="delete-animal-btn" class="submit-btn btn-red btn-delete" hidden><i class="fa-solid fa-trash" aria-hidden="true"></i> Sil</button>
+            <button type="submit" id="save-btn" class="submit-btn"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Kaydet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resim Büyütme Modalı -->
+  <div id="image-zoom-modal" class="modal-overlay zoom-overlay" role="dialog" aria-modal="true" aria-label="Büyütülmüş fotoğraf" hidden>
+    <div class="zoom-content-wrapper">
+      <button class="close-modal zoom-close" id="close-zoom-modal" type="button" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      <img id="z-img" src="" alt="Büyütülmüş fotoğraf">
+    </div>
+  </div>
+
+  <script src="main.js?v=7.0"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "Kampüs Patileri",
+  "short_name": "Patiler",
+  "id": "./index.html",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "tr",
+  "background_color": "#ff8c42",
+  "theme_color": "#ff8c42",
+  "description": "Kampüsteki can dostlarımızın sağlık durumlarını ve konumlarını takip edin.",
+  "icons": [
+    {
+      "src": "./icon-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
